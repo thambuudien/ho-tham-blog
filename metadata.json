@@ -1,0 +1,8 @@
+{
+  "name": "Hồ Thầm Blog",
+  "description": "Blog cá nhân của Hồ Thầm, tích hợp WordPress GraphQL API, hỗ trợ tìm kiếm, phân trang và bài viết nổi bật.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

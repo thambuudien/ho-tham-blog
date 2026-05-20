@@ -1,9 +1,49 @@
-import { fetchWP, GET_POST_BY_SLUG } from "@/lib/wordpress";
+import { fetchWP, GET_POST_BY_SLUG, GET_RELATED_POSTS } from "@/lib/wordpress";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { User, Calendar, Tag, MessageSquare, Share2, Facebook, Twitter, Link2, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
+import PostCard from "@/components/PostCard";
+import type { Metadata } from "next";
+
+export async function generateMetadata({
+  params,
+}: {
+  params: Promise<{ slug: string }>;
+}): Promise<Metadata> {
+  const { slug } = await params;
+  const data = await fetchWP(GET_POST_BY_SLUG, { id: slug });
+  const post = data?.post;
+
+  if (!post || !post.seo) {
+    return {
+      title: post?.title || "Bài viết",
+    };
+  }
+
+  const { seo } = post;
+
+  return {
+    title: seo.title,
+    description: seo.metaDesc,
+    alternates: {
+      canonical: seo.canonical,
+    },
+    openGraph: {
+      title: seo.opengraphTitle || seo.title,
+      description: seo.opengraphDescription || seo.metaDesc,
+      images: seo.opengraphImage ? [{ url: seo.opengraphImage.sourceUrl }] : [],
+      type: (seo.opengraphType as any) || "article",
+    },
+    twitter: {
+      card: "summary_large_image",
+      title: seo.twitterTitle || seo.title,
+      description: seo.twitterDescription || seo.metaDesc,
+      images: seo.twitterImage ? [seo.twitterImage.sourceUrl] : [],
+    },
+  };
+}
 
 export default async function PostPage({
   params,
@@ -18,10 +58,23 @@ export default async function PostPage({
     notFound();
   }
 
+  const primaryCategory = post.categories.nodes[0]?.slug;
+  const relatedData = await fetchWP(GET_RELATED_POSTS, { 
+    categoryName: primaryCategory, 
+    notIn: [post.id] 
+  });
+  const relatedPosts = relatedData.posts.nodes;
+
   const dateStr = format(new Date(post.date), "dd MMMM, yyyy", { locale: vi });
 
   return (
     <article className="px-6 lg:px-12 py-12">
+      {post.seo?.schema?.raw && (
+        <script
+          type="application/ld+json"
+          dangerouslySetInnerHTML={{ __html: post.seo.schema.raw || "" }}
+        />
+      )}
       <header className="mx-auto max-w-4xl text-center mb-16">
         <div className="mb-6 flex justify-center gap-3">
           {post.categories.nodes.map((cat: any) => (
@@ -69,7 +122,7 @@ export default async function PostPage({
       <div className="mx-auto max-w-3xl">
         <div 
           className="prose prose-blue prose-lg max-w-none prose-headings:font-serif prose-headings:font-bold prose-headings:text-slate-900 prose-p:text-slate-600 prose-p:leading-relaxed prose-li:text-slate-600 prose-strong:text-slate-900 prose-blockquote:border-blue-600 prose-blockquote:bg-blue-50 prose-blockquote:py-2 prose-blockquote:px-6 prose-blockquote:rounded-r-lg prose-img:rounded-xl"
-          dangerouslySetInnerHTML={{ __html: post.content }}
+          dangerouslySetInnerHTML={{ __html: post.content || "" }}
         />
 
         <div className="mt-16 flex items-center justify-between border-y border-slate-100 py-8">
@@ -88,7 +141,21 @@ export default async function PostPage({
           </div>
         </div>
 
-        <footer className="mt-20 border-t border-slate-100 pt-16">
+        {relatedPosts.length > 0 && (
+          <section className="mt-24">
+            <div className="mb-12 flex items-center gap-4">
+              <h3 className="font-serif text-2xl font-bold text-slate-900">Bài viết liên quan</h3>
+              <div className="h-px flex-1 bg-slate-200"></div>
+            </div>
+            <div className="grid gap-8 sm:grid-cols-2">
+              {relatedPosts.map((rPost: any) => (
+                <PostCard key={rPost.id} post={rPost} />
+              ))}
+            </div>
+          </section>
+        )}
+
+        <footer className="mt-24 border-t border-slate-100 pt-16">
           <div className="flex items-center gap-6 bg-white p-10 rounded-2xl border border-slate-200 shadow-xl shadow-blue-900/5 relative overflow-hidden group">
             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
               <MessageSquare size={100} />

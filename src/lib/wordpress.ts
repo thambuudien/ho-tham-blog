@@ -12,11 +12,14 @@ export const fetchWP = async (query: string, variables = {}) => {
 };
 
 export const GET_POSTS = gql`
-  query GetPosts($first: Int, $after: String, $search: String, $categoryName: String) {
+  query GetPosts($first: Int = 100, $search: String, $categoryName: String) {
     posts(
       first: $first
-      after: $after
-      where: { search: $search, categoryName: $categoryName, status: PUBLISH }
+      where: {
+        search: $search
+        categoryName: $categoryName
+        status: PUBLISH
+      }
     ) {
       nodes {
         id
@@ -41,12 +44,6 @@ export const GET_POSTS = gql`
             slug
           }
         }
-      }
-      pageInfo {
-        endCursor
-        hasNextPage
-        hasPreviousPage
-        startCursor
       }
     }
   }
@@ -111,6 +108,25 @@ export const GET_POST_BY_SLUG = gql`
       title
       content
       date
+      seo {
+        title
+        metaDesc
+        canonical
+        opengraphTitle
+        opengraphDescription
+        opengraphImage {
+          sourceUrl
+        }
+        opengraphType
+        twitterTitle
+        twitterDescription
+        twitterImage {
+          sourceUrl
+        }
+        schema {
+          raw
+        }
+      }
       featuredImage {
         node {
           sourceUrl
@@ -143,6 +159,31 @@ export const GET_CATEGORIES = gql`
         name
         slug
         count
+      }
+    }
+  }
+`;
+
+export const GET_RELATED_POSTS = gql`
+  query GetRelatedPosts($categoryName: String, $notIn: [ID]) {
+    posts(first: 3, where: { categoryName: $categoryName, notIn: $notIn, status: PUBLISH }) {
+      nodes {
+        id
+        title
+        slug
+        date
+        featuredImage {
+          node {
+            sourceUrl
+            altText
+          }
+        }
+        categories {
+          nodes {
+            name
+            slug
+          }
+        }
       }
     }
   }

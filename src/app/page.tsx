@@ -2,6 +2,7 @@ import { fetchWP, GET_FEATURED_POSTS, GET_POSTS, GET_LATEST_POSTS } from "@/lib/
 import PostCard from "@/components/PostCard";
 import { Loader2, ChevronRight, MessageSquare } from "lucide-react";
 import { Post } from "@/types";
+import Link from "next/link";
 
 export default async function HomePage({
   searchParams,
@@ -19,10 +20,10 @@ export default async function HomePage({
   }
 
   const postsData = await fetchWP(GET_POSTS, {
-    first: 9,
     search: searchQuery || "",
     categoryName: currentCategorySlug || "",
   });
+
   const posts = postsData.posts.nodes;
 
   return (

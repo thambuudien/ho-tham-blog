@@ -1,6 +1,6 @@
 import { Building2, MapPin, Phone, Mail, MessageCircle } from "lucide-react";
 import * as motion from "motion/react-client";
-
+export const revalidate = 604800; // Làm mới dữ liệu sau 7 ngày (7 * 24 * 60 * 60)
 export default function AboutPage() {
   return (
     <div className="mx-auto max-w-4xl px-6 py-12">

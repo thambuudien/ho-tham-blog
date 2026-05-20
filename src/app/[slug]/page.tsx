@@ -44,7 +44,7 @@ export async function generateMetadata({
     },
   };
 }
-
+export const revalidate = 604800; // Làm mới dữ liệu sau 7 ngày (7 * 24 * 60 * 60)
 export default async function PostPage({
   params,
 }: {

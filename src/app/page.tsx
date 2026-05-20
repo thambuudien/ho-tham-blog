@@ -3,7 +3,7 @@ import PostCard from "@/components/PostCard";
 import { Loader2, ChevronRight, MessageSquare } from "lucide-react";
 import { Post } from "@/types";
 import Link from "next/link";
-
+export const revalidate = 604800; // Làm mới dữ liệu sau 7 ngày (7 * 24 * 60 * 60)
 export default async function HomePage({
   searchParams,
 }: {

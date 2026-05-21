@@ -7,6 +7,8 @@ import { notFound } from "next/navigation";
 import PostCard from "@/components/PostCard";
 import type { Metadata } from "next";
 
+export const revalidate = 604800; // Làm mới dữ liệu sau 7 ngày (7 * 24 * 60 * 60)
+
 export async function generateMetadata({
   params,
 }: {
@@ -44,7 +46,7 @@ export async function generateMetadata({
     },
   };
 }
-export const revalidate = 604800; // Làm mới dữ liệu sau 7 ngày (7 * 24 * 60 * 60)
+
 export default async function PostPage({
   params,
 }: {
@@ -72,7 +74,7 @@ export default async function PostPage({
       {post.seo?.schema?.raw && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: post.seo.schema.raw || "" }}
+          dangerouslySetInnerHTML={{ __html: post.seo.schema.raw }}
         />
       )}
       <header className="mx-auto max-w-4xl text-center mb-16">
@@ -122,7 +124,7 @@ export default async function PostPage({
       <div className="mx-auto max-w-3xl">
         <div 
           className="prose prose-blue prose-lg max-w-none prose-headings:font-serif prose-headings:font-bold prose-headings:text-slate-900 prose-p:text-slate-600 prose-p:leading-relaxed prose-li:text-slate-600 prose-strong:text-slate-900 prose-blockquote:border-blue-600 prose-blockquote:bg-blue-50 prose-blockquote:py-2 prose-blockquote:px-6 prose-blockquote:rounded-r-lg prose-img:rounded-xl"
-          dangerouslySetInnerHTML={{ __html: post.content || "" }}
+          dangerouslySetInnerHTML={{ __html: post.content }}
         />
 
         <div className="mt-16 flex items-center justify-between border-y border-slate-100 py-8">

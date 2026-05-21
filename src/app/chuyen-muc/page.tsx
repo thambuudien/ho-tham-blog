@@ -2,7 +2,9 @@ import { fetchWP, GET_CATEGORIES } from "@/lib/wordpress";
 import { Hash, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import * as motion from "motion/react-client";
+
 export const revalidate = 604800; // Làm mới dữ liệu sau 7 ngày (7 * 24 * 60 * 60)
+
 export default async function CategoriesPage() {
   const data = await fetchWP(GET_CATEGORIES);
   const categories = data.categories.nodes.filter((cat: any) => cat.count > 0);

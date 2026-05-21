@@ -3,6 +3,7 @@ import { Inter, Playfair_Display } from "next/font/google";
 import "@/index.css";
 import Navbar from "@/components/NavbarWrapper";
 import Footer from "@/components/Footer";
+import Script from "next/script";
 
 const inter = Inter({
   subsets: ["latin", "vietnamese"],
@@ -30,6 +31,18 @@ export default function RootLayout({
   return (
     <html lang="vi" className={`${inter.variable} ${playfair.variable}`}>
       <body className="min-h-screen bg-[#FDFDFD] font-sans antialiased">
+        <Script
+          src="https://www.googletagmanager.com/gtag/js?id=G-WHG9E0S6Z0"
+          strategy="afterInteractive"
+        />
+        <Script id="google-analytics" strategy="afterInteractive">
+          {`
+            window.dataLayer = window.dataLayer || [];
+            function gtag(){dataLayer.push(arguments);}
+            gtag('js', new Date());
+            gtag('config', 'G-WHG9E0S6Z0');
+          `}
+        </Script>
         <Suspense fallback={<div className="h-20 bg-white border-b border-slate-100 animate-pulse"></div>}>
           <Navbar />
         </Suspense>

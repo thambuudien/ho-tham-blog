@@ -15,7 +15,7 @@ export default function PostCard({ post, variant = "default" }: PostCardProps) {
 
   if (variant === "featured") {
     return (
-      <Link href={`/post/${post.slug}`}>
+      <Link href={`/${post.slug}`}>
         <motion.div
           initial={{ opacity: 0 }}
           whileInView={{ opacity: 1 }}
@@ -90,7 +90,7 @@ export default function PostCard({ post, variant = "default" }: PostCardProps) {
   }
 
   return (
-    <Link href={`/post/${post.slug}`} className="flex flex-col h-full group">
+    <Link href={`/${post.slug}`} className="flex flex-col h-full group">
       <motion.div
         initial={{ opacity: 0, y: 10 }}
         whileInView={{ opacity: 1, y: 0 }}

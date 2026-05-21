@@ -43,7 +43,7 @@ export default function PostCard({ post, variant = "default" }: PostCardProps) {
             </h2>
             <div
               className="mb-8 line-clamp-3 text-sm text-slate-600 leading-relaxed"
-              dangerouslySetInnerHTML={{ __html: post.excerpt }}
+              dangerouslySetInnerHTML={{ __html: post.excerpt || "" }}
             />
             <div className="flex items-center gap-4 border-t border-slate-100 pt-6">
               <div className="h-10 w-10 rounded-full bg-slate-100 overflow-hidden border border-slate-200">
@@ -115,7 +115,7 @@ export default function PostCard({ post, variant = "default" }: PostCardProps) {
         </h3>
         <div
           className="mb-6 line-clamp-2 text-xs text-slate-600 leading-relaxed"
-          dangerouslySetInnerHTML={{ __html: post.excerpt }}
+          dangerouslySetInnerHTML={{ __html: post.excerpt || "" }}
         />
         <div className="text-[10px] font-black uppercase tracking-[0.1em] text-slate-400 mt-auto border-t border-slate-100 pt-4">{dateStr}</div>
       </motion.div>

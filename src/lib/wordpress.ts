@@ -1,13 +1,12 @@
 import { request, gql } from "graphql-request";
 
 const WP_URL = process.env.WP_GRAPHQL_URL || "https://hotham.vn/graphql";
-const WP_TOKEN = process.env.WP_GRAPHQL_AUTH_TOKEN || process.env.WP_AUTH_TOKEN || process.env.WORDPRESS_AUTH_TOKEN;
 
 export const fetchWP = async (query: string, variables = {}) => {
   try {
     const headers: Record<string, string> = {};
-    if (WP_TOKEN) {
-      headers["Authorization"] = `Bearer ${WP_TOKEN}`;
+    if (process.env.WP_GRAPHQL_AUTH_TOKEN) {
+      headers["Authorization"] = `Bearer ${process.env.WP_GRAPHQL_AUTH_TOKEN}`;
     }
     return await request(WP_URL, query, variables, headers);
   } catch (error: any) {
@@ -176,6 +175,7 @@ export const GET_RELATED_POSTS = gql`
         id
         title
         slug
+        excerpt
         date
         featuredImage {
           node {

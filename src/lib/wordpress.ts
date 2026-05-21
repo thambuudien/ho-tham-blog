@@ -1,10 +1,15 @@
 import { request, gql } from "graphql-request";
 
 const WP_URL = process.env.WP_GRAPHQL_URL || "https://hotham.vn/graphql";
+const WP_TOKEN = process.env.WP_GRAPHQL_AUTH_TOKEN || process.env.WP_AUTH_TOKEN || process.env.WORDPRESS_AUTH_TOKEN;
 
 export const fetchWP = async (query: string, variables = {}) => {
   try {
-    return await request(WP_URL, query, variables);
+    const headers: Record<string, string> = {};
+    if (WP_TOKEN) {
+      headers["Authorization"] = `Bearer ${WP_TOKEN}`;
+    }
+    return await request(WP_URL, query, variables, headers);
   } catch (error: any) {
     console.error("WP GraphQL Error:", error.message);
     throw error;

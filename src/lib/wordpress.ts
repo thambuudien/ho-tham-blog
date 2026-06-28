@@ -1,13 +1,13 @@
 import { request, gql } from "graphql-request";
 
-const WP_URL = process.env.WP_GRAPHQL_URL || "https://hotham.vn/wordpress/rYkOy1HCCRD0JZZcrshVYaUR39QfcG15QWUC437BMM5Pk3gNLu";
+const WP_URL = "https://hotham.vn/wordpress/rYkOy1HCCRD0JZZcrshVYaUR39QfcG15QWUC437BMM5Pk3gNLu";
 
 export const fetchWP = async (query: string, variables = {}) => {
   try {
     const headers: Record<string, string> = {};
-    if (process.env.WP_GRAPHQL_AUTH_TOKEN) {
-      headers["Authorization"] = `Bearer ${process.env.WP_GRAPHQL_AUTH_TOKEN}`;
-    }
+    // if (process.env.WP_GRAPHQL_AUTH_TOKEN) {
+    //   headers["Authorization"] = `Bearer ${process.env.WP_GRAPHQL_AUTH_TOKEN} || "eyJ0eXAiOiJKV1QiLCJhbGciOiJIUzI1NiJ9.eyJpc3MiOiJodHRwczovL2hvdGhhbS52biIsImlhdCI6MTc4MjY1OTIwNywibmJmIjoxNzgyNjU5MjA3LCJleHAiOjM1NjUzMzY0MTQsImRhdGEiOnsidXNlciI6eyJpZCI6IjY2In19fQ.Bza3uujHlC05vSsuJzvQd0lhbLAiA6o-2Jhe0k3Kz-E"`;
+    // }
     return await request(WP_URL, query, variables, headers);
   } catch (error: any) {
     console.error("WP GraphQL Error:", error.message);

@@ -1,6 +1,6 @@
 import { request, gql } from "graphql-request";
 
-const WP_URL = process.env.WP_GRAPHQL_URL || "https://hotham.vn/graphql";
+const WP_URL = process.env.WP_GRAPHQL_URL || "https://hotham.vn/wordpress/rYkOy1HCCRD0JZZcrshVYaUR39QfcG15QWUC437BMM5Pk3gNLu";
 
 export const fetchWP = async (query: string, variables = {}) => {
   try {
@@ -189,6 +189,15 @@ export const GET_RELATED_POSTS = gql`
           }
         }
       }
+    }
+  }
+`;
+
+export const SUBSCRIBE_TO_NEWSLETTER = gql`
+  mutation SubscribeToNewsletter($email: String!) {
+    subscribeToNewsletter(input: { email: $email }) {
+      success
+      message
     }
   }
 `;

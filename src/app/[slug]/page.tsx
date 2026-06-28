@@ -6,6 +6,7 @@ import Link from "next/link";
 import { notFound } from "next/navigation";
 import PostCard from "@/components/PostCard";
 import type { Metadata } from "next";
+import Image from "next/image";
 
 export const revalidate = 604800; // Làm mới dữ liệu sau 7 ngày (7 * 24 * 60 * 60)
 
@@ -61,9 +62,9 @@ export default async function PostPage({
   }
 
   const primaryCategory = post.categories.nodes[0]?.slug;
-  const relatedData = await fetchWP(GET_RELATED_POSTS, { 
-    categoryName: primaryCategory, 
-    notIn: [post.id] 
+  const relatedData = await fetchWP(GET_RELATED_POSTS, {
+    categoryName: primaryCategory,
+    notIn: [post.id]
   });
   const relatedPosts = relatedData.posts.nodes;
 
@@ -94,8 +95,8 @@ export default async function PostPage({
         </h1>
         <div className="flex flex-wrap items-center justify-center gap-8 text-[10px] font-black uppercase tracking-widest text-slate-400 border-y border-slate-100 py-8">
           <div className="flex items-center gap-3">
-            <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-white shadow-md">
-              <img src="https://i0.wp.com/hotham.vn/wordpress/wp-content/uploads/sites/30/2024/10/logo.png" alt="Hồ Thị Thắm" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+            <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-white shadow-md relative">
+              <Image src="https://i0.wp.com/hotham.vn/wordpress/wp-content/uploads/sites/30/2024/10/logo.png" alt="Hồ Thị Thắm" className="h-full w-full object-cover" fill />
             </div>
             <span className="text-slate-900 font-bold">Hồ Thị Thắm</span>
           </div>
@@ -111,18 +112,18 @@ export default async function PostPage({
       </header>
 
       {post.featuredImage && (
-        <div className="mx-auto mb-16 max-w-5xl overflow-hidden rounded-2xl shadow-2xl shadow-blue-900/10">
-          <img
+        <div className="mx-auto mb-16 max-w-5xl overflow-hidden rounded-2xl shadow-2xl shadow-blue-900/10 aspect-[16/9] relative">
+          <Image
             src={post.featuredImage.node.sourceUrl}
             alt={post.featuredImage.node.altText || post.title}
-            className="w-full object-cover"
-            referrerPolicy="no-referrer"
+            className="w-full h-full object-cover"
+            fill
           />
         </div>
       )}
 
       <div className="mx-auto max-w-3xl">
-        <div 
+        <div
           className="prose prose-blue prose-lg max-w-none prose-headings:font-serif prose-headings:font-bold prose-headings:text-slate-900 prose-p:text-slate-600 prose-p:leading-relaxed prose-li:text-slate-600 prose-strong:text-slate-900 prose-blockquote:border-blue-600 prose-blockquote:bg-blue-50 prose-blockquote:py-2 prose-blockquote:px-6 prose-blockquote:rounded-r-lg prose-img:rounded-xl"
           dangerouslySetInnerHTML={{ __html: post.content || "" }}
         />
@@ -162,8 +163,8 @@ export default async function PostPage({
             <div className="absolute top-0 right-0 p-4 opacity-5 group-hover:opacity-10 transition-opacity">
               <MessageSquare size={100} />
             </div>
-            <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full border-4 border-white shadow-xl">
-              <img src="https://i0.wp.com/hotham.vn/wordpress/wp-content/uploads/sites/30/2024/10/logo.png" alt="Hồ Thị Thắm" className="h-full w-full object-cover" referrerPolicy="no-referrer" />
+            <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full border-4 border-white shadow-xl relative">
+              <Image src="https://i0.wp.com/hotham.vn/wordpress/wp-content/uploads/sites/30/2024/10/logo.png" alt="Hồ Thị Thắm" className="h-full w-full object-cover" fill />
             </div>
             <div className="relative z-10">
               <h4 className="font-serif text-2xl font-bold text-slate-900 mb-2">Hồ Thị Thắm</h4>

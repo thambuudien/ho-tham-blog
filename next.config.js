@@ -11,6 +11,8 @@ const nextConfig = {
         hostname: 'images.unsplash.com',
       },
     ],
+    loader: 'custom',
+    loaderFile: './image-loader.js',
   },
 };
 

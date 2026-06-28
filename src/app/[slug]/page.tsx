@@ -18,31 +18,31 @@ export async function generateMetadata({
   const data = await fetchWP(GET_POST_BY_SLUG, { id: slug });
   const post = data?.post;
 
-  if (!post || !post.seo) {
+  if (!post || !post.lwsSeo) {
     return {
       title: post?.title || "Bài viết",
     };
   }
 
-  const { seo } = post;
+  const { lwsSeo: seo } = post;
 
   return {
-    title: seo.title,
-    description: seo.metaDesc,
+    title: seo.metaTitle,
+    description: seo.metaDescription,
     alternates: {
       canonical: seo.canonical,
     },
     openGraph: {
-      title: seo.opengraphTitle || seo.title,
-      description: seo.opengraphDescription || seo.metaDesc,
-      images: seo.opengraphImage ? [{ url: seo.opengraphImage.sourceUrl }] : [],
-      type: (seo.opengraphType as any) || "article",
+      title: seo.opengraph.title || seo.metaTitle,
+      description: seo.opengraph.dscription || seo.metaDescription,
+      images: seo.opengraph.image ? [{ url: seo.opengraph.image }] : [],
+      type: (seo.opengraph.type as any) || "article",
     },
     twitter: {
       card: "summary_large_image",
-      title: seo.twitterTitle || seo.title,
-      description: seo.twitterDescription || seo.metaDesc,
-      images: seo.twitterImage ? [seo.twitterImage.sourceUrl] : [],
+      title: seo.opengraph.title || seo.metaTitle,
+      description: seo.opengraph.dscription || seo.metaDescription,
+      images: seo.opengraph.image ? [{ url: seo.opengraph.image }] : [],
     },
   };
 }
@@ -71,10 +71,10 @@ export default async function PostPage({
 
   return (
     <article className="px-6 lg:px-12 py-12">
-      {post.seo?.schema?.raw && (
+      {post.lwsSeo?.schema && (
         <script
           type="application/ld+json"
-          dangerouslySetInnerHTML={{ __html: post.seo.schema.raw || "" }}
+          dangerouslySetInnerHTML={{ __html: post.lwsSeo.schema || "" }}
         />
       )}
       <header className="mx-auto max-w-4xl text-center mb-16">

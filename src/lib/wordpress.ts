@@ -112,23 +112,22 @@ export const GET_POST_BY_SLUG = gql`
       title
       content
       date
-      seo {
-        title
-        metaDesc
+      lwsSeo {
+        focusKeyword
+        fullHeadHtml
+        metaDescription
+        metaTitle
+        nofollow
+        noindex
         canonical
-        opengraphTitle
-        opengraphDescription
-        opengraphImage {
-          sourceUrl
-        }
-        opengraphType
-        twitterTitle
-        twitterDescription
-        twitterImage {
-          sourceUrl
-        }
-        schema {
-          raw
+        schema
+        opengraph {
+          description
+          image
+          siteName
+          title
+          type
+          url
         }
       }
       featuredImage {

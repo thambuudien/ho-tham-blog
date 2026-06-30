@@ -1,80 +1,49 @@
-'use client';
-
-import { fetchWP, GET_FEATURED_POSTS, GET_POSTS, GET_LATEST_POSTS, SUBSCRIBE_TO_NEWSLETTER } from "@/lib/wordpress";
+import { fetchWP, GET_FEATURED_POSTS, GET_POSTS, GET_LATEST_POSTS } from "@/lib/wordpress";
 import PostCard from "@/components/PostCard";
-import { Loader2, ChevronRight, MessageSquare } from "lucide-react";
 import { Post } from "@/types";
 import Link from "next/link";
-import { useState, useEffect } from "react";
+import SubscriptionForm from "@/components/SubscriptionForm";
 
-export default function HomePage() {
-  const [searchParams, setSearchParams] = useState<{ q?: string; c?: string }>({});
-  const [featuredPosts, setFeaturedPosts] = useState<Post[]>([]);
-  const [posts, setPosts] = useState<Post[]>([]);
-  const [email, setEmail] = useState("");
-  const [subscribeMessage, setSubscribeMessage] = useState("");
-  const [isSubscribing, setIsSubscribing] = useState(false);
+export default async function HomePage({
+  searchParams,
+}: {
+  searchParams: { q?: string; c?: string };
+}) {
+  const q = searchParams.q || "";
+  const c = searchParams.c || "";
 
-  useEffect(() => {
-    const params = new URLSearchParams(window.location.search);
-    const q = params.get("q") || undefined;
-    const c = params.get("c") || undefined;
-    setSearchParams({ q, c });
+  const featuredData = await fetchWP(GET_FEATURED_POSTS);
+  let featured = featuredData.posts.nodes;
 
-    async function fetchData() {
-      const featuredData = await fetchWP(GET_FEATURED_POSTS);
-      let featured = featuredData.posts.nodes;
+  if (featured.length === 0) {
+    const latestData = await fetchWP(GET_LATEST_POSTS, { first: 3 });
+    featured = latestData.posts.nodes;
+  }
+  const featuredPosts: Post[] = featured;
 
-      if (featured.length === 0) {
-        const latestData = await fetchWP(GET_LATEST_POSTS, { first: 3 });
-        featured = latestData.posts.nodes;
-      }
-      setFeaturedPosts(featured);
-
-      const postsData = await fetchWP(GET_POSTS, {
-        search: q || "",
-        categoryName: c || "",
-      });
-      setPosts(postsData.posts.nodes);
-    }
-
-    fetchData();
-  }, []);
-
-  const handleSubscribe = async () => {
-    setIsSubscribing(true);
-    setSubscribeMessage("");
-    try {
-      const data = await fetchWP(SUBSCRIBE_TO_NEWSLETTER, { email });
-      if (!data.subscribeToNewsletter.success) {
-        throw new Error(data.subscribeToNewsletter.message || "Something went wrong");
-      }
-      setSubscribeMessage("Cảm ơn bạn đã đăng ký!");
-      setEmail("");
-    } catch (error: any) {
-      setSubscribeMessage(error.message);
-    } finally {
-      setIsSubscribing(false);
-    }
-  };
+  const postsData = await fetchWP(GET_POSTS, {
+    search: q,
+    categoryName: c,
+  });
+  const posts: Post[] = postsData.posts.nodes;
 
   return (
     <div className="px-6">
-      {searchParams.q && (
+      {q && (
         <div className="mb-12 border-l-4 border-slate-900 pl-6">
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Kết quả tìm kiếm</span>
-          <h2 className="font-serif text-4xl font-bold italic mt-1 text-slate-900">"{searchParams.q}"</h2>
+          <h2 className="font-serif text-4xl font-bold italic mt-1 text-slate-900">"{q}"</h2>
         </div>
       )}
 
-      {searchParams.c && (
+      {c && (
         <div className="mb-12 border-l-4 border-blue-600 pl-6">
           <span className="text-xs font-bold uppercase tracking-[0.2em] text-slate-400">Chuyên mục</span>
-          <h2 className="font-serif text-4xl font-bold italic mt-1 text-slate-900">{searchParams.c}</h2>
+          <h2 className="font-serif text-4xl font-bold italic mt-1 text-slate-900">{c}</h2>
         </div>
       )}
 
-      {!searchParams.q && !searchParams.c && featuredPosts.length > 0 && (
+      {!q && !c && featuredPosts.length > 0 && (
         <section className="mb-20">
           <div className="flex items-center gap-3 mb-8">
             <div className="h-[2px] w-12 bg-blue-600"></div>
@@ -101,20 +70,7 @@ export default function HomePage() {
                   />
                 ))}
               </div>
-              <div className="mt-8 rounded-xl bg-slate-900 p-8 text-white shadow-xl shadow-blue-900/10 relative overflow-hidden">
-                <div className="absolute top-0 right-0 p-4 opacity-10">
-                   <MessageSquare size={80} />
-                </div>
-                <h4 className="mb-2 font-serif text-xl font-bold relative z-10">Tư vấn BHXH/BHYT</h4>
-                <p className="mb-6 text-xs text-slate-400 relative z-10 leading-relaxed">Đăng ký để nhận giải đáp thắc mắc về chính sách bảo hiểm mới nhất từ chị Hồ Thị Thắm.</p>
-                <div className="flex flex-col gap-3 relative z-10">
-                  <input type="email" placeholder="Email của bạn" value={email} onChange={(e) => setEmail(e.target.value)} className="w-full bg-white/10 border border-white/20 px-4 py-2 text-xs focus:outline-none focus:border-blue-400 transition-colors placeholder:text-slate-500 rounded-sm" />
-                  <button onClick={handleSubscribe} disabled={isSubscribing} className="bg-blue-600 text-white py-2 text-xs font-black uppercase tracking-widest hover:bg-blue-500 transition-all rounded-sm disabled:opacity-50">
-                    {isSubscribing ? <Loader2 className="animate-spin mx-auto" /> : "Nhận tư vấn ngay"}
-                  </button>
-                  {subscribeMessage && <p className="text-xs text-center mt-2">{subscribeMessage}</p>}
-                </div>
-              </div>
+              <SubscriptionForm />
             </div>
           </div>
         </section>
@@ -122,7 +78,7 @@ export default function HomePage() {
 
       <div className="mb-12 flex items-center gap-4">
         <h2 className="font-serif text-2xl font-bold text-slate-900">
-          {searchParams.q || searchParams.c ? "Kết quả liên quan" : "Cẩm nang bảo hiểm"}
+          {q || c ? "Kết quả liên quan" : "Cẩm nang bảo hiểm"}
         </h2>
         <div className="h-px flex-1 bg-slate-200"></div>
       </div>

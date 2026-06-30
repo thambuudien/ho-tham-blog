@@ -1,5 +1,5 @@
 import { Building2, MapPin, Phone, Mail, MessageCircle } from "lucide-react";
-import * as motion from "motion/react-client";
+import AnimatedImage from "@/components/AnimatedImage";
 
 export const revalidate = 604800; // Làm mới dữ liệu sau 7 ngày (7 * 24 * 60 * 60)
 
@@ -13,19 +13,7 @@ export default function AboutPage() {
       </div>
 
       <div className="grid md:grid-cols-2 gap-16 items-start">
-        <motion.div
-           initial={{ opacity: 0, x: -20 }}
-           animate={{ opacity: 1, x: 0 }}
-        >
-          <div className="aspect-[3/4] rounded-xl border border-slate-200 bg-slate-50 overflow-hidden relative group shadow-2xl shadow-blue-900/5">
-            <img 
-              src="https://i0.wp.com/hotham.vn/wordpress/wp-content/uploads/sites/30/2024/10/logo.png" 
-              alt="Hồ Thị Thắm" 
-              className="w-full h-full object-cover group-hover:scale-105 transition-all duration-700"
-              referrerPolicy="no-referrer"
-            />
-          </div>
-        </motion.div>
+        <AnimatedImage />
 
         <div className="space-y-8">
           <div className="prose prose-slate prose-sm leading-relaxed text-slate-600 mb-10">

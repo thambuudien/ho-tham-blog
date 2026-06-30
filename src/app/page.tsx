@@ -4,13 +4,16 @@ import { Post } from "@/types";
 import Link from "next/link";
 import SubscriptionForm from "@/components/SubscriptionForm";
 
-export default async function HomePage({
-  searchParams,
-}: {
-  searchParams: { q?: string; c?: string };
-}) {
-  const q = searchParams.q || "";
-  const c = searchParams.c || "";
+type HomePageProps = {
+  searchParams: { [key: string]: string | string[] | undefined };
+};
+
+export default async function HomePage({ searchParams }: HomePageProps) {
+  const qParam = searchParams.q;
+  const q = Array.isArray(qParam) ? qParam[0] : qParam || "";
+
+  const cParam = searchParams.c;
+  const c = Array.isArray(cParam) ? cParam[0] : cParam || "";
 
   const featuredData = await fetchWP(GET_FEATURED_POSTS);
   let featured = featuredData.posts.nodes;

@@ -10,12 +10,14 @@ import Image from "next/image";
 
 export const revalidate = 604800; // Làm mới dữ liệu sau 7 ngày (7 * 24 * 60 * 60)
 
-export async function generateMetadata({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}): Promise<Metadata> {
-  const { slug } = await params;
+type PostPageProps = {
+  params: { 
+    slug: string;
+  };
+};
+
+export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
+  const { slug } = params;
   const data = await fetchWP(GET_POST_BY_SLUG, { id: slug });
   const post = data?.post;
 
@@ -48,12 +50,8 @@ export async function generateMetadata({
   };
 }
 
-export default async function PostPage({
-  params,
-}: {
-  params: Promise<{ slug: string }>;
-}) {
-  const { slug } = await params;
+export default async function PostPage({ params }: PostPageProps) {
+  const { slug } = params;
   const data = await fetchWP(GET_POST_BY_SLUG, { id: slug });
   const post = data.post;
 

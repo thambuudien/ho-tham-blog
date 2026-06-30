@@ -1,7 +1,6 @@
-'use client';
-
 import Link from 'next/link';
-import { motion } from 'motion/react-client';
+// Sử dụng wildcard import cho Server Component
+import * as motion from 'motion/react-client'; 
 import { Hash, ChevronRight } from 'lucide-react';
 
 export default function CategoryCard({ category }: { category: any }) {

@@ -40,3 +40,4 @@ export interface PostsResponse {
     pageInfo: PageInfo;
   };
 }
+

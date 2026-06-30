@@ -1,25 +1,31 @@
 import { fetchWP, GET_POST_BY_SLUG, GET_RELATED_POSTS } from "@/lib/wordpress";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
-import { User, Calendar, Tag, MessageSquare, Share2, Facebook, Twitter, Link2, ChevronRight } from "lucide-react";
+import { Calendar, Tag, MessageSquare, Facebook, Twitter, Link2, ChevronRight } from "lucide-react";
 import Link from "next/link";
 import { notFound } from "next/navigation";
 import PostCard from "@/components/PostCard";
 import type { Metadata } from "next";
 import Image from "next/image";
+import { cache } from "react";
 
-export const revalidate = 604800; // Làm mới dữ liệu sau 7 ngày (7 * 24 * 60 * 60)
+export const revalidate = 604800; // Làm mới dữ liệu sau 7 ngày
 
 type PostPageProps = {
-  params: { 
+  params: Promise<{ 
     slug: string;
-  };
+  }>;
 };
 
-export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
-  const { slug } = params;
+// 1. Ghi nhớ request (Request Memoization) để tránh gọi API trùng lặp giữa Metadata và Page render
+const getPost = cache(async (slug: string) => {
   const data = await fetchWP(GET_POST_BY_SLUG, { id: slug });
-  const post = data?.post;
+  return data?.post;
+});
+
+export async function generateMetadata({ params }: PostPageProps): Promise<Metadata> {
+  const { slug } = await params;
+  const post = await getPost(slug);
 
   if (!post || !post.lwsSeo) {
     return {
@@ -28,6 +34,9 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   }
 
   const { lwsSeo: seo } = post;
+  
+  // Kiểm tra an toàn cả hai trường hợp 'description' và 'dscription' (đề phòng lỗi chính tả schema)
+  const ogDescription = seo.opengraph?.description || seo.opengraph?.dscription || seo.metaDescription;
 
   return {
     title: seo.metaTitle,
@@ -36,37 +45,41 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
       canonical: seo.canonical,
     },
     openGraph: {
-      title: seo.opengraph.title || seo.metaTitle,
-      description: seo.opengraph.dscription || seo.metaDescription,
-      images: seo.opengraph.image ? [{ url: seo.opengraph.image }] : [],
-      type: (seo.opengraph.type as any) || "article",
+      title: seo.opengraph?.title || seo.metaTitle,
+      description: ogDescription,
+      images: seo.opengraph?.image ? [{ url: seo.opengraph.image }] : [],
+      type: (seo.opengraph?.type as any) || "article",
     },
     twitter: {
       card: "summary_large_image",
-      title: seo.opengraph.title || seo.metaTitle,
-      description: seo.opengraph.dscription || seo.metaDescription,
-      images: seo.opengraph.image ? [{ url: seo.opengraph.image }] : [],
+      title: seo.opengraph?.title || seo.metaTitle,
+      description: ogDescription,
+      images: seo.opengraph?.image ? [{ url: seo.opengraph.image }] : [],
     },
   };
 }
 
 export default async function PostPage({ params }: PostPageProps) {
-  const { slug } = params;
-  const data = await fetchWP(GET_POST_BY_SLUG, { id: slug });
-  const post = data.post;
+  const { slug } = await params;
+  const post = await getPost(slug);
 
   if (!post) {
     notFound();
   }
 
-  const primaryCategory = post.categories.nodes[0]?.slug;
-  const relatedData = await fetchWP(GET_RELATED_POSTS, {
-    categoryName: primaryCategory,
-    notIn: [post.id]
-  });
-  const relatedPosts = relatedData.posts.nodes;
+  // 2. Lấy danh sách bài viết liên quan một cách an toàn (tránh lỗi khi post không có category)
+  const primaryCategory = post.categories?.nodes?.[0]?.slug;
+  let relatedPosts = [];
+  
+  if (primaryCategory) {
+    const relatedData = await fetchWP(GET_RELATED_POSTS, {
+      categoryName: primaryCategory,
+      notIn: [post.id]
+    });
+    relatedPosts = relatedData?.posts?.nodes || [];
+  }
 
-  const dateStr = format(new Date(post.date), "dd MMMM, yyyy", { locale: vi });
+  const dateStr = post.date ? format(new Date(post.date), "dd MMMM, yyyy", { locale: vi }) : "";
 
   return (
     <article className="px-6 lg:px-12 py-12">
@@ -78,7 +91,7 @@ export default async function PostPage({ params }: PostPageProps) {
       )}
       <header className="mx-auto max-w-4xl text-center mb-16">
         <div className="mb-6 flex justify-center gap-3">
-          {post.categories.nodes.map((cat: any) => (
+          {post.categories?.nodes?.map((cat: any) => (
             <Link
               key={cat.slug}
               href={`/?c=${cat.slug}`}
@@ -94,14 +107,22 @@ export default async function PostPage({ params }: PostPageProps) {
         <div className="flex flex-wrap items-center justify-center gap-8 text-[10px] font-black uppercase tracking-widest text-slate-400 border-y border-slate-100 py-8">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-white shadow-md relative">
-              <Image src="https://i0.wp.com/hotham.vn/wordpress/wp-content/uploads/sites/30/2024/10/logo.png" alt="Hồ Thị Thắm" className="h-full w-full object-cover" fill />
+              <Image 
+                src="https://i0.wp.com/hotham.vn/wordpress/wp-content/uploads/sites/30/2024/10/logo.png" 
+                alt="Hồ Thị Thắm" 
+                className="h-full w-full object-cover" 
+                fill 
+                sizes="40px"
+              />
             </div>
             <span className="text-slate-900 font-bold">Hồ Thị Thắm</span>
           </div>
-          <div className="flex items-center gap-2">
-            <Calendar size={14} className="text-blue-600" />
-            <span>{dateStr}</span>
-          </div>
+          {dateStr && (
+            <div className="flex items-center gap-2">
+              <Calendar size={14} className="text-blue-600" />
+              <span>{dateStr}</span>
+            </div>
+          )}
           <div className="flex items-center gap-2">
             <Tag size={14} className="text-blue-600" />
             <span>5 phút đọc</span>
@@ -109,13 +130,15 @@ export default async function PostPage({ params }: PostPageProps) {
         </div>
       </header>
 
-      {post.featuredImage && (
+      {post.featuredImage?.node?.sourceUrl && (
         <div className="mx-auto mb-16 max-w-5xl overflow-hidden rounded-2xl shadow-2xl shadow-blue-900/10 aspect-[16/9] relative">
           <Image
             src={post.featuredImage.node.sourceUrl}
-            alt={post.featuredImage.node.altText || post.title}
+            alt={post.featuredImage.node.altText || post.title || "Featured Image"}
             className="w-full h-full object-cover"
             fill
+            priority // Tải ưu tiên ảnh bìa để tối ưu chỉ số LCP cho Core Web Vitals
+            sizes="(max-width: 1024px) 100vw, 1024px"
           />
         </div>
       )}
@@ -130,13 +153,13 @@ export default async function PostPage({ params }: PostPageProps) {
           <div className="flex items-center gap-4">
             <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Chia sẻ:</span>
             <div className="flex gap-2">
-               <button className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm"><Facebook size={18} /></button>
-               <button className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-600 hover:bg-black hover:text-white transition-all shadow-sm"><Twitter size={18} /></button>
-               <button className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-600 hover:bg-blue-400 hover:text-white transition-all shadow-sm"><Link2 size={18} /></button>
+               <button className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm" aria-label="Share on Facebook"><Facebook size={18} /></button>
+               <button className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-600 hover:bg-black hover:text-white transition-all shadow-sm" aria-label="Share on Twitter"><Twitter size={18} /></button>
+               <button className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-600 hover:bg-blue-400 hover:text-white transition-all shadow-sm" aria-label="Copy link"><Link2 size={18} /></button>
             </div>
           </div>
           <div className="flex gap-2">
-             {post.categories.nodes.map((cat: any) => (
+             {post.categories?.nodes?.map((cat: any) => (
                 <Link key={cat.slug} href={`/?c=${cat.slug}`} className="text-[10px] font-bold text-slate-400 hover:text-blue-600">#{cat.name}</Link>
              ))}
           </div>
@@ -162,7 +185,13 @@ export default async function PostPage({ params }: PostPageProps) {
               <MessageSquare size={100} />
             </div>
             <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full border-4 border-white shadow-xl relative">
-              <Image src="https://i0.wp.com/hotham.vn/wordpress/wp-content/uploads/sites/30/2024/10/logo.png" alt="Hồ Thị Thắm" className="h-full w-full object-cover" fill />
+              <Image 
+                src="https://i0.wp.com/hotham.vn/wordpress/wp-content/uploads/sites/30/2024/10/logo.png" 
+                alt="Hồ Thị Thắm" 
+                className="h-full w-full object-cover" 
+                fill 
+                sizes="96px"
+              />
             </div>
             <div className="relative z-10">
               <h4 className="font-serif text-2xl font-bold text-slate-900 mb-2">Hồ Thị Thắm</h4>

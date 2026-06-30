@@ -1,34 +1,44 @@
 import { fetchWP, GET_FEATURED_POSTS, GET_POSTS, GET_LATEST_POSTS } from "@/lib/wordpress";
 import PostCard from "@/components/PostCard";
 import { Post } from "@/types";
-import Link from "next/link";
 import SubscriptionForm from "@/components/SubscriptionForm";
 
 type HomePageProps = {
-  searchParams: { [key: string]: string | string[] | undefined };
+  // Cấu hình searchParams thành Promise để tương thích Next.js 15
+  searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
 export default async function HomePage({ searchParams }: HomePageProps) {
-  const qParam = searchParams.q;
+  // 1. Giải nén searchParams bằng await
+  const resolvedSearchParams = await searchParams;
+  
+  const qParam = resolvedSearchParams.q;
   const q = Array.isArray(qParam) ? qParam[0] : qParam || "";
 
-  const cParam = searchParams.c;
+  const cParam = resolvedSearchParams.c;
   const c = Array.isArray(cParam) ? cParam[0] : cParam || "";
 
-  const featuredData = await fetchWP(GET_FEATURED_POSTS);
-  let featured = featuredData.posts.nodes;
-
-  if (featured.length === 0) {
-    const latestData = await fetchWP(GET_LATEST_POSTS, { first: 3 });
-    featured = latestData.posts.nodes;
-  }
-  const featuredPosts: Post[] = featured;
-
-  const postsData = await fetchWP(GET_POSTS, {
+  // 2. Tải song song cả Tiêu điểm và Cẩm nang để tối ưu tốc độ phản hồi trang (TTFB)
+  const featuredDataPromise = fetchWP(GET_FEATURED_POSTS);
+  const postsDataPromise = fetchWP(GET_POSTS, {
     search: q,
     categoryName: c,
   });
-  const posts: Post[] = postsData.posts.nodes;
+
+  const [featuredData, postsData] = await Promise.all([
+    featuredDataPromise,
+    postsDataPromise
+  ]);
+
+  let featured = featuredData?.posts?.nodes || [];
+
+  // Nếu không có bài viết tiêu điểm, gọi API fallback lấy tin mới nhất
+  if (featured.length === 0) {
+    const latestData = await fetchWP(GET_LATEST_POSTS, { first: 3 });
+    featured = latestData?.posts?.nodes || [];
+  }
+  const featuredPosts: Post[] = featured;
+  const posts: Post[] = postsData?.posts?.nodes || [];
 
   return (
     <div className="px-6">

@@ -8,6 +8,9 @@ type HomePageProps = {
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
+// Kích hoạt cơ chế tĩnh tự làm mới ngầm (ISR) sau mỗi 1 tiếng (3600 giây)
+export const revalidate = 3600; 
+
 export default async function HomePage({ searchParams }: HomePageProps) {
   // 1. Giải nén searchParams bằng await
   const resolvedSearchParams = await searchParams;

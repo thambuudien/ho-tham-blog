@@ -9,7 +9,7 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { cache } from "react";
 
-export const revalidate = 604800; // Làm mới dữ liệu sau 7 ngày
+export const revalidate = 3600; 
 
 type PostPageProps = {
   params: Promise<{ 
@@ -58,6 +58,23 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
     },
   };
 }
+
+export async function generateStaticParams() {
+  const data = await fetchWP(`
+    query GetAllPostSlugs {
+      posts(first: 100) {
+        nodes {
+          slug
+        }
+      }
+    }
+  `);
+
+  return data?.posts?.nodes?.map((post: { slug: string }) => ({
+    slug: post.slug,
+  })) || [];
+}
+
 
 export default async function PostPage({ params }: PostPageProps) {
   const { slug } = await params;

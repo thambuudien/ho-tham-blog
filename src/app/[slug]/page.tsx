@@ -1,4 +1,4 @@
-import { fetchWP, GET_POST_BY_SLUG, GET_RELATED_POSTS } from "@/lib/wordpress";
+import { fetchWP, GET_POST_BY_SLUG, GET_RELATED_POSTS, GET_ALL_POST_SLUGS } from "@/lib/wordpress";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { Calendar, Tag, MessageSquare, Facebook, Twitter, Link2, ChevronRight } from "lucide-react";
@@ -35,7 +35,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 
   const { lwsSeo: seo } = post;
   
-  // Kiểm tra an toàn cả hai trường hợp 'description' và 'dscription' (đề phòng lỗi chính tả schema)
+  // Kiểm tra cả hai trường hợp để đề phòng lỗi chính tả cấu trúc của schema cũ
   const ogDescription = seo.opengraph?.description || seo.opengraph?.dscription || seo.metaDescription;
 
   return {
@@ -48,7 +48,7 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
       title: seo.opengraph?.title || seo.metaTitle,
       description: ogDescription,
       images: seo.opengraph?.image ? [{ url: seo.opengraph.image }] : [],
-      type: (seo.opengraph?.type as any) || "article",
+      type: (seo.opengraph?.type as "article" | "website") || "article",
     },
     twitter: {
       card: "summary_large_image",
@@ -59,22 +59,14 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   };
 }
 
+// Tái sử dụng query đã khai báo sẵn trong lib để tránh viết lặp lại
 export async function generateStaticParams() {
-  const data = await fetchWP(`
-    query GetAllPostSlugs {
-      posts(first: 100) {
-        nodes {
-          slug
-        }
-      }
-    }
-  `);
+  const data = await fetchWP(GET_ALL_POST_SLUGS);
 
   return data?.posts?.nodes?.map((post: { slug: string }) => ({
     slug: post.slug,
   })) || [];
 }
-
 
 export default async function PostPage({ params }: PostPageProps) {
   const { slug } = await params;
@@ -84,7 +76,7 @@ export default async function PostPage({ params }: PostPageProps) {
     notFound();
   }
 
-  // 2. Lấy danh sách bài viết liên quan một cách an toàn (tránh lỗi khi post không có category)
+  // 2. Lấy danh sách bài viết liên quan một cách an toàn
   const primaryCategory = post.categories?.nodes?.[0]?.slug;
   let relatedPosts = [];
   
@@ -96,7 +88,18 @@ export default async function PostPage({ params }: PostPageProps) {
     relatedPosts = relatedData?.posts?.nodes || [];
   }
 
-  const dateStr = post.date ? format(new Date(post.date), "dd MMMM, yyyy", { locale: vi }) : "";
+  // Xử lý ngày tháng an toàn tránh lỗi runtime không đáng có
+  let dateStr = "";
+  if (post.date) {
+    try {
+      const parsedDate = new Date(post.date);
+      if (!isNaN(parsedDate.getTime())) {
+        dateStr = format(parsedDate, "dd MMMM, yyyy", { locale: vi });
+      }
+    } catch (error) {
+      console.error("Lỗi định dạng ngày tháng bài viết:", error);
+    }
+  }
 
   return (
     <article className="px-6 lg:px-12 py-12">

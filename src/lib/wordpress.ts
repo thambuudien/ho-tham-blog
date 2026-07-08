@@ -1,24 +1,46 @@
-import { request, gql } from "graphql-request";
+import { GraphQLClient, gql } from "graphql-request";
 
-const WP_URL = "https://hotham.vn/wordpress/rYkOy1HCCRD0JZZcrshVYaUR39QfcG15QWUC437BMM5Pk3gNLu";
+// Sử dụng biến môi trường (Khuyến nghị) hoặc fallback về url cứng nếu chưa cấu hình .env
+const WP_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://hotham.vn/wordpress/rYkOy1HCCRD0JZZcrshVYaUR39QfcG15QWUC437BMM5Pk3gNLu";
+const WP_SECRET = process.env.WORDPRESS_SECRET_TOKEN || "f4e18c5d6c2645e5981a837904c7b8d3";
 
-export const fetchWP = async (query: string, variables = {},tags: string[] = ["wordpress"]) => {
+export const fetchWP = async <T = any, V extends Record<string, any> = Record<string, any>>(
+  query: string,
+  variables?: V,
+  tags: string[] = ["wordpress"]
+): Promise<T> => {
+  // Kiểm tra xem truy vấn có phải là mutation hay không
+  const isMutation = query.trim().startsWith("mutation");
+
+  const client = new GraphQLClient(WP_URL, {
+    headers: {
+      "lws-hotham-secret-token": WP_SECRET,
+    },
+    // Ghi đè fetch để Next.js Data Cache có thể bắt được cấu hình revalidate & tags
+    fetch: (url, init) => {
+      return fetch(url, {
+        ...init,
+        ...(isMutation
+          ? { cache: "no-store" } // Không lưu cache đối với các mutation ghi dữ liệu
+          : {
+              next: {
+                revalidate: 604800, // Cache 7 ngày (604,800 giây)
+                tags: tags,         // Tag định danh để revalidate chủ động
+              },
+            }),
+      });
+    },
+  });
+
   try {
-    const headers: Record<string, string> = {
-      "lws-hotham-secret-token": "f4e18c5d6c2645e5981a837904c7b8d3"
-    };
-    return await request(WP_URL, query, variables, {
-      ...headers,
-      next: {
-        revalidate: 604800, // Cache 7 ngày (604,800 giây)
-        tags: tags          // Tag định danh để revalidate tức thì
-      }
-    } as any);
+    return await client.request<T>(query, variables);
   } catch (error: any) {
-    console.error("WP GraphQL Error:", error.message);
+    console.error("WP GraphQL Error:", error.message || error);
     throw error;
   }
 };
+
+// --- GIỮ NGUYÊN CÁC TRUY VẤN GRAPHQL CỦA BẠN ---
 
 export const GET_POSTS = gql`
   query GetPosts($first: Int = 100, $search: String, $categoryName: String) {
@@ -198,8 +220,6 @@ export const GET_RELATED_POSTS = gql`
   }
 `;
 
-
-
 export const GET_ALL_POST_SLUGS = gql`
   query GetAllPostSlugs {
     posts(first: 10000, where: { status: PUBLISH }) {
@@ -210,7 +230,6 @@ export const GET_ALL_POST_SLUGS = gql`
   }
 `;
 
-
 export const SUBSCRIBE_TO_NEWSLETTER = gql`
   mutation SubscribeToNewsletter($email: String!) {
     subscribeToNewsletter(input: { email: $email }) {
@@ -219,6 +238,7 @@ export const SUBSCRIBE_TO_NEWSLETTER = gql`
     }
   }
 `;
+
 export const GET_POST_FOR_SITEMAP = gql`
   query GetPostsForSitemap {
     posts(first: 10000, where: { status: PUBLISH }) {

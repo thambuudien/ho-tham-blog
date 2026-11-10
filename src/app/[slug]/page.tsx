@@ -1,4 +1,3 @@
-import { fetchWP, GET_POST_BY_SLUG, GET_RELATED_POSTS, GET_ALL_POST_SLUGS } from "@/lib/wordpress";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { Calendar, Tag, MessageSquare, Facebook, Twitter, Link2, ChevronRight } from "lucide-react";
@@ -11,6 +10,112 @@ import { cache } from "react";
 
 export const revalidate = 3600; 
 
+// Helper to fetch from our new API route
+async function fetchAPI(query: string, { variables, tags }: { variables?: any, tags?: string[] } = {}) {
+  const res = await fetch('https://blog.hotham.vn/api/wp', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query,
+      variables,
+      tags,
+    }),
+    next: {
+      tags,
+    }
+  });
+
+  if (!res.ok) {
+    // Optionally handle errors more gracefully
+    console.error("API Fetch Error:", await res.text());
+    return null;
+  }
+
+  return res.json();
+}
+
+
+const GET_POST_BY_SLUG = `
+  query GetPostBySlug($id: ID!) {
+    post(id: $id, idType: SLUG) {
+      id
+      title
+      slug
+      date
+      content
+      featuredImage {
+        node {
+          sourceUrl
+          altText
+        }
+      }
+      categories {
+        nodes {
+          name
+          slug
+        }
+      }
+      lwsSeo {
+        metaTitle
+        metaDescription
+        canonical
+        opengraph {
+          title
+          description
+          image
+          type
+        }
+        schema
+      }
+    }
+  }
+`;
+
+const GET_RELATED_POSTS = `
+  query GetRelatedPosts($categoryName: String!, $notIn: [ID]!) {
+    posts(
+      first: 2, 
+      where: { 
+        categoryName: $categoryName, 
+        notIn: $notIn 
+      }
+    ) {
+      nodes {
+        id
+        title
+        slug
+        date
+        excerpt
+        featuredImage {
+          node {
+            sourceUrl
+            altText
+          }
+        }
+        categories(first: 1) {
+          nodes {
+            name
+            slug
+          }
+        }
+      }
+    }
+  }
+`;
+
+const GET_ALL_POST_SLUGS = `
+  query GetAllPostSlugs {
+    posts(first: 1000) {
+      nodes {
+        slug
+      }
+    }
+  }
+`;
+
+
 type PostPageProps = {
   params: Promise<{ 
     slug: string;
@@ -19,7 +124,7 @@ type PostPageProps = {
 
 // 1. Ghi nhớ request (Request Memoization) để tránh gọi API trùng lặp giữa Metadata và Page render
 const getPost = cache(async (slug: string) => {
-  const data = await fetchWP(GET_POST_BY_SLUG, { id: slug });
+  const data = await fetchAPI(GET_POST_BY_SLUG, { variables: { id: slug }, tags: ['wordpress', `post:${slug}`] });
   return data?.post;
 });
 
@@ -61,7 +166,8 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
 
 // Tái sử dụng query đã khai báo sẵn trong lib để tránh viết lặp lại
 export async function generateStaticParams() {
-  const data = await fetchWP(GET_ALL_POST_SLUGS);
+  return [];
+  const data = await fetchAPI(GET_ALL_POST_SLUGS, { tags: ['wordpress', 'posts']});
 
   return data?.posts?.nodes?.map((post: { slug: string }) => ({
     slug: post.slug,
@@ -81,9 +187,12 @@ export default async function PostPage({ params }: PostPageProps) {
   let relatedPosts = [];
   
   if (primaryCategory) {
-    const relatedData = await fetchWP(GET_RELATED_POSTS, {
-      categoryName: primaryCategory,
-      notIn: [post.id]
+    const relatedData = await fetchAPI(GET_RELATED_POSTS, {
+      variables: {
+        categoryName: primaryCategory,
+        notIn: [post.id]
+      },
+      tags: ['wordpress', 'related-posts']
     });
     relatedPosts = relatedData?.posts?.nodes || [];
   }

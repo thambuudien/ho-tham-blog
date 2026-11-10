@@ -1,18 +1,89 @@
-import { fetchWP, GET_FEATURED_POSTS, GET_POSTS, GET_LATEST_POSTS } from "@/lib/wordpress";
 import PostCard from "@/components/PostCard";
 import { Post } from "@/types";
 import SubscriptionForm from "@/components/SubscriptionForm";
 
+// Helper to fetch from our new API route
+async function fetchAPI(query: string, { variables, tags }: { variables?: any, tags?: string[] } = {}) {
+  const res = await fetch('https://blog.hotham.vn/api/wp', {
+    method: 'POST',
+    headers: {
+      'Content-Type': 'application/json',
+    },
+    body: JSON.stringify({
+      query,
+      variables,
+      tags,
+    }),
+    next: {
+      tags,
+    }
+  });
+
+  if (!res.ok) {
+    console.error("API Fetch Error:", await res.text());
+    return null;
+  }
+
+  return res.json();
+}
+
+const COMMON_POST_FIELDS = `
+  id
+  title
+  slug
+  date
+  excerpt
+  featuredImage {
+    node {
+      sourceUrl
+      altText
+    }
+  }
+  categories(first: 1) {
+    nodes {
+      name
+      slug
+    }
+  }
+`;
+
+const GET_POSTS = `
+  query GetPosts($search: String, $categoryName: String) {
+    posts(where: { search: $search, categoryName: $categoryName }) {
+      nodes {
+        ${COMMON_POST_FIELDS}
+      }
+    }
+  }
+`;
+
+const GET_FEATURED_POSTS = `
+  query GetFeaturedPosts {
+    posts(where: { tag: "tieu-diem" }) {
+      nodes {
+        ${COMMON_POST_FIELDS}
+      }
+    }
+  }
+`;
+
+const GET_LATEST_POSTS = `
+  query GetLatestPosts($first: Int) {
+    posts(first: $first) {
+      nodes {
+        ${COMMON_POST_FIELDS}
+      }
+    }
+  }
+`;
+
 type HomePageProps = {
-  // Cấu hình searchParams thành Promise để tương thích Next.js 15
   searchParams: Promise<{ [key: string]: string | string[] | undefined }>;
 };
 
-// Kích hoạt cơ chế tĩnh tự làm mới ngầm (ISR) sau mỗi 1 tiếng (3600 giây)
 export const revalidate = 3600; 
 
 export default async function HomePage({ searchParams }: HomePageProps) {
-  // 1. Giải nén searchParams bằng await
   const resolvedSearchParams = await searchParams;
   
   const qParam = resolvedSearchParams.q;
@@ -21,11 +92,10 @@ export default async function HomePage({ searchParams }: HomePageProps) {
   const cParam = resolvedSearchParams.c;
   const c = Array.isArray(cParam) ? cParam[0] : cParam || "";
 
-  // 2. Tải song song cả Tiêu điểm và Cẩm nang để tối ưu tốc độ phản hồi trang (TTFB)
-  const featuredDataPromise = fetchWP(GET_FEATURED_POSTS);
-  const postsDataPromise = fetchWP(GET_POSTS, {
-    search: q,
-    categoryName: c,
+  const featuredDataPromise = fetchAPI(GET_FEATURED_POSTS, { tags: ['wordpress', 'featured-posts'] });
+  const postsDataPromise = fetchAPI(GET_POSTS, {
+    variables: { search: q, categoryName: c },
+    tags: ['wordpress', 'posts-list', `search:${q}`, `category:${c}`]
   });
 
   const [featuredData, postsData] = await Promise.all([
@@ -35,9 +105,8 @@ export default async function HomePage({ searchParams }: HomePageProps) {
 
   let featured = featuredData?.posts?.nodes || [];
 
-  // Nếu không có bài viết tiêu điểm, gọi API fallback lấy tin mới nhất
   if (featured.length === 0) {
-    const latestData = await fetchWP(GET_LATEST_POSTS, { first: 3 });
+    const latestData = await fetchAPI(GET_LATEST_POSTS, { variables: { first: 3 }, tags: ['wordpress', 'latest-posts'] });
     featured = latestData?.posts?.nodes || [];
   }
   const featuredPosts: Post[] = featured;

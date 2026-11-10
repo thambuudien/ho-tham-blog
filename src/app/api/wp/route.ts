@@ -1,22 +1,39 @@
 import { NextResponse } from "next/server";
 import { GraphQLClient } from "graphql-request";
 
-const WP_URL = process.env.NEXT_PUBLIC_WORDPRESS_API_URL || "https://hotham.vn/wordpress/rYkOy1HCCRD0JZZcrshVYaUR39QfcG15QWUC437BMM5Pk3gNLu";
-const WP_SECRET = process.env.WORDPRESS_SECRET_TOKEN || "f4e18c5d6c2645e5981a837904c7b8d3";
+// CHỈ lấy từ env, không có fallback hard-code
+const WP_URL = process.env.WORDPRESS_API_URL;
+const WP_SECRET = process.env.WORDPRESS_SECRET_TOKEN;
 
 export async function POST(request: Request) {
   try {
+    if (!WP_URL || !WP_SECRET) {
+      console.error("Missing WORDPRESS_API_URL or WORDPRESS_SECRET_TOKEN");
+      return NextResponse.json(
+        { error: "Server misconfigured" },
+        { status: 500 }
+      );
+    }
+
     const body = await request.json();
     const { query, variables, tags } = body;
 
-    if (!query) {
-      return new NextResponse(JSON.stringify({ error: "Query is required" }), {
-        status: 400,
-        headers: { 'Content-Type': 'application/json' },
-      });
+    if (!query || typeof query !== "string") {
+      return NextResponse.json(
+        { error: "Query is required" },
+        { status: 400 }
+      );
     }
 
-    const isMutation = query.trim().startsWith("mutation");
+    // Chặn mutation từ client - chỉ cho phép query đọc dữ liệu
+    // Nếu bạn cần mutation (form liên hệ, comment...), tách ra 1 route riêng có validate chặt
+    const trimmed = query.trim().toLowerCase();
+    if (trimmed.startsWith("mutation")) {
+      return NextResponse.json(
+        { error: "Mutations are not allowed" },
+        { status: 403 }
+      );
+    }
 
     const client = new GraphQLClient(WP_URL, {
       headers: {
@@ -25,33 +42,37 @@ export async function POST(request: Request) {
       fetch: (url, init) => {
         return fetch(url, {
           ...init,
-          ...(isMutation
-            ? { cache: "no-store" } // Do not cache mutations
-            : {
-                next: {
-                  revalidate: 604800, // Cache for 7 days
-                  tags: tags || ["wordpress"], // Default tags
-                },
-              }),
+          next: {
+            revalidate: 604800, // Cache 7 ngày
+            tags: tags || ["wordpress"],
+          },
         });
       },
     });
 
     const data = await client.request(query, variables);
     return NextResponse.json(data);
-  } catch (error: any) {
+  } catch (error: unknown) {
     console.error(error);
-    // Check for GraphQL errors from graphql-request
-    if (error.response && error.response.errors) {
-        return new NextResponse(JSON.stringify({ error: 'GraphQL error', details: error.response.errors }), {
-            status: 400,
-            headers: { 'Content-Type': 'application/json' },
-        });
+
+    if (
+      typeof error === "object" &&
+      error !== null &&
+      "response" in error &&
+      typeof (error as { response?: unknown }).response === "object"
+    ) {
+      const res = (error as { response: { errors?: unknown } }).response;
+      if (res?.errors) {
+        return NextResponse.json(
+          { error: "GraphQL error", details: res.errors },
+          { status: 400 }
+        );
+      }
     }
 
-    return new NextResponse(JSON.stringify({ error: 'Failed to fetch from WordPress API', details: error.message }), {
-      status: 500,
-      headers: { 'Content-Type': 'application/json' },
-    });
+    return NextResponse.json(
+      { error: "Failed to fetch from WordPress API" },
+      { status: 500 }
+    );
   }
 }

@@ -1,4 +1,4 @@
-import { fetchWP, GET_POST_BY_SLUG, GET_RELATED_POSTS, GET_ALL_POST_SLUGS, getCtaType } from "@/lib/wordpress";
+import { fetchWP, GET_POST_BY_SLUG, GET_RELATED_POSTS, GET_ALL_POST_SLUGS } from "@/lib/wordpress";
 import { format } from "date-fns";
 import { vi } from "date-fns/locale";
 import { Calendar, Tag, MessageSquare, Facebook, Twitter, Link2, ChevronRight } from "lucide-react";
@@ -9,13 +9,15 @@ import type { Metadata } from "next";
 import Image from "next/image";
 import { cache } from "react";
 
-export const revalidate = 3600;
+export const revalidate = 3600; 
 
 type PostPageProps = {
-  params: Promise<{ slug: string }>;
+  params: Promise<{ 
+    slug: string;
+  }>;
 };
 
-// 1. Ghi nhớ request để tránh gọi API trùng lặp giữa Metadata và Page render
+// 1. Ghi nhớ request (Request Memoization) để tránh gọi API trùng lặp giữa Metadata và Page render
 const getPost = cache(async (slug: string) => {
   const data = await fetchWP(GET_POST_BY_SLUG, { id: slug });
   return data?.post;
@@ -32,6 +34,8 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   }
 
   const { lwsSeo: seo } = post;
+  
+  // Kiểm tra cả hai trường hợp để đề phòng lỗi chính tả cấu trúc của schema cũ
   const ogDescription = seo.opengraph?.description || seo.opengraph?.dscription || seo.metaDescription;
 
   return {
@@ -55,45 +59,13 @@ export async function generateMetadata({ params }: PostPageProps): Promise<Metad
   };
 }
 
+// Tái sử dụng query đã khai báo sẵn trong lib để tránh viết lặp lại
 export async function generateStaticParams() {
-  try {
-    const data = await fetchWP(GET_ALL_POST_SLUGS);
-    return data?.posts?.nodes?.map((post: { slug: string }) => ({
-      slug: post.slug,
-    })) || [];
-  } catch {
-    return []; // WP bị chặn thì vẫn build được, trang sẽ render on-demand
-  }
-}
+  const data = await fetchWP(GET_ALL_POST_SLUGS);
 
-// --- CTA TỰ ĐỘNG THEO CHUYÊN MỤC ---
-function CtaBox({ type }: { type: "bhyt" | "bhxh" | "both" }) {
-  if (type === "bhyt") {
-    return (
-      <div className="my-10 rounded-2xl border border-blue-100 bg-blue-50 p-5 sm:p-6">
-        <p className="font-bold text-[#0B4AA2] text-lg">Bà con ơi, đọc xong bài này rồi, làm luôn 2 bước này cho khỏi quên nhé:</p>
-        <p className="mt-3 text-slate-700">✅ <strong>Bước 1 - Tính tiền:</strong> <Link href="https://www.hotham.vn/tinh-muc-dong-bhyt" className="text-blue-700 font-bold hover:underline">Bấm vào đây để tính tiền BHYT nhà mình →</Link></p>
-        <p className="mt-2 text-slate-700">✅ <strong>Bước 2 - Gia hạn:</strong> <Link href="https://www.hotham.vn/bhyt" className="text-blue-700 font-bold hover:underline">Bấm vào đây để em Thắm gia hạn thẻ cho cả nhà mình →</Link></p>
-        <p className="mt-3 text-sm text-slate-600">Để em nhắc hạn cho cả nhà mình, bà con đăng ký ở đây, miễn phí ạ: <Link href="https://www.hotham.vn/#form-nhac-han" className="text-blue-700 font-bold hover:underline">Đăng ký nhắc hạn miễn phí →</Link></p>
-      </div>
-    );
-  }
-  if (type === "bhxh") {
-    return (
-      <div className="my-10 rounded-2xl border border-green-100 bg-green-50 p-5 sm:p-6">
-        <p className="font-bold text-green-800 text-lg">Bà con ơi, đọc xong bài này rồi, làm luôn 2 bước này cho khỏi quên nhé:</p>
-        <p className="mt-3 text-slate-700">✅ <strong>Bước 1 - Tính thử:</strong> <Link href="https://www.hotham.vn/tinh-luong-huu-bhxh" className="text-green-700 font-bold hover:underline">Bấm vào đây để tính thử sau này lương hưu được bao nhiêu →</Link></p>
-        <p className="mt-2 text-slate-700">✅ <strong>Bước 2 - Đăng ký:</strong> <Link href="https://www.hotham.vn/bhxh" className="text-green-700 font-bold hover:underline">Bấm vào đây để em Thắm đăng ký BHXH tự nguyện cho bà con →</Link></p>
-        <p className="mt-3 text-sm text-slate-600">Để em nhắc hạn cho cả nhà mình, bà con đăng ký ở đây, miễn phí ạ: <Link href="https://www.hotham.vn/#form-nhac-han" className="text-blue-700 font-bold hover:underline">Đăng ký nhắc hạn miễn phí →</Link></p>
-      </div>
-    );
-  }
-  return (
-    <div className="my-10 grid gap-4 sm:grid-cols-2">
-      <Link href="https://www.hotham.vn/tinh-muc-dong-bhyt" className="rounded-2xl bg-blue-600 p-5 text-white font-bold hover:bg-blue-700 transition-all">Tính tiền BHYT nhà mình →</Link>
-      <Link href="https://www.hotham.vn/tinh-luong-huu-bhxh" className="rounded-2xl bg-green-600 p-5 text-white font-bold hover:bg-green-700 transition-all">Tính thử lương hưu →</Link>
-    </div>
-  );
+  return data?.posts?.nodes?.map((post: { slug: string }) => ({
+    slug: post.slug,
+  })) || [];
 }
 
 export default async function PostPage({ params }: PostPageProps) {
@@ -107,7 +79,7 @@ export default async function PostPage({ params }: PostPageProps) {
   // 2. Lấy danh sách bài viết liên quan một cách an toàn
   const primaryCategory = post.categories?.nodes?.[0]?.slug;
   let relatedPosts = [];
-
+  
   if (primaryCategory) {
     const relatedData = await fetchWP(GET_RELATED_POSTS, {
       categoryName: primaryCategory,
@@ -115,9 +87,6 @@ export default async function PostPage({ params }: PostPageProps) {
     });
     relatedPosts = relatedData?.posts?.nodes || [];
   }
-
-  // 3. Xác định CTA theo category thật trên WordPress
-  const ctaType = getCtaType(post.categories?.nodes);
 
   // Xử lý ngày tháng an toàn tránh lỗi runtime không đáng có
   let dateStr = "";
@@ -146,7 +115,7 @@ export default async function PostPage({ params }: PostPageProps) {
             <Link
               key={cat.slug}
               href={`/?c=${cat.slug}`}
-              className="text- font-black uppercase tracking-[0.2em] text-blue-600 bg-blue-50 px-3 py-1 rounded-full hover:bg-blue-100 transition-all shadow-sm"
+              className="text-[10px] font-black uppercase tracking-[0.2em] text-blue-600 bg-blue-50 px-3 py-1 rounded-full hover:bg-blue-100 transition-all shadow-sm"
             >
               {cat.name}
             </Link>
@@ -155,14 +124,14 @@ export default async function PostPage({ params }: PostPageProps) {
         <h1 className="mb-10 font-serif text-4xl font-bold leading-tight text-slate-900 md:text-6xl">
           {post.title}
         </h1>
-        <div className="flex flex-wrap items-center justify-center gap-8 text- font-black uppercase tracking-widest text-slate-400 border-y border-slate-100 py-8">
+        <div className="flex flex-wrap items-center justify-center gap-8 text-[10px] font-black uppercase tracking-widest text-slate-400 border-y border-slate-100 py-8">
           <div className="flex items-center gap-3">
             <div className="h-10 w-10 overflow-hidden rounded-full border-2 border-white shadow-md relative">
-              <Image
-                src="https://i0.wp.com/hotham.vn/wordpress/wp-content/uploads/sites/30/2024/10/logo.png"
-                alt="Hồ Thị Thắm"
-                className="h-full w-full object-cover"
-                fill
+              <Image 
+                src="https://i0.wp.com/hotham.vn/wordpress/wp-content/uploads/sites/30/2024/10/logo.png" 
+                alt="Hồ Thị Thắm" 
+                className="h-full w-full object-cover" 
+                fill 
                 sizes="40px"
               />
             </div>
@@ -188,7 +157,7 @@ export default async function PostPage({ params }: PostPageProps) {
             alt={post.featuredImage.node.altText || post.title || "Featured Image"}
             className="w-full h-full object-cover"
             fill
-            priority
+            priority // Tải ưu tiên ảnh bìa để tối ưu chỉ số LCP cho Core Web Vitals
             sizes="(max-width: 1024px) 100vw, 1024px"
           />
         </div>
@@ -200,22 +169,19 @@ export default async function PostPage({ params }: PostPageProps) {
           dangerouslySetInnerHTML={{ __html: post.content || "" }}
         />
 
-        {/* CTA TỰ ĐỘNG - HIỆN NGAY SAU NỘI DUNG BÀI */}
-        <CtaBox type={ctaType} />
-
         <div className="mt-16 flex items-center justify-between border-y border-slate-100 py-8">
           <div className="flex items-center gap-4">
             <span className="text-xs font-bold uppercase tracking-widest text-slate-400">Chia sẻ:</span>
             <div className="flex gap-2">
-              <button className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm" aria-label="Share on Facebook"><Facebook size={18} /></button>
-              <button className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-600 hover:bg-black hover:text-white transition-all shadow-sm" aria-label="Share on Twitter"><Twitter size={18} /></button>
-              <button className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-600 hover:bg-blue-400 hover:text-white transition-all shadow-sm" aria-label="Copy link"><Link2 size={18} /></button>
+               <button className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-600 hover:bg-blue-600 hover:text-white transition-all shadow-sm" aria-label="Share on Facebook"><Facebook size={18} /></button>
+               <button className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-600 hover:bg-black hover:text-white transition-all shadow-sm" aria-label="Share on Twitter"><Twitter size={18} /></button>
+               <button className="h-10 w-10 flex items-center justify-center rounded-full bg-slate-50 text-slate-600 hover:bg-blue-400 hover:text-white transition-all shadow-sm" aria-label="Copy link"><Link2 size={18} /></button>
             </div>
           </div>
           <div className="flex gap-2">
-            {post.categories?.nodes?.map((cat: any) => (
-              <Link key={cat.slug} href={`/?c=${cat.slug}`} className="text- font-bold text-slate-400 hover:text-blue-600">#{cat.name}</Link>
-            ))}
+             {post.categories?.nodes?.map((cat: any) => (
+                <Link key={cat.slug} href={`/?c=${cat.slug}`} className="text-[10px] font-bold text-slate-400 hover:text-blue-600">#{cat.name}</Link>
+             ))}
           </div>
         </div>
 
@@ -239,11 +205,11 @@ export default async function PostPage({ params }: PostPageProps) {
               <MessageSquare size={100} />
             </div>
             <div className="h-24 w-24 shrink-0 overflow-hidden rounded-full border-4 border-white shadow-xl relative">
-              <Image
-                src="https://i0.wp.com/hotham.vn/wordpress/wp-content/uploads/sites/30/2024/10/logo.png"
-                alt="Hồ Thị Thắm"
-                className="h-full w-full object-cover"
-                fill
+              <Image 
+                src="https://i0.wp.com/hotham.vn/wordpress/wp-content/uploads/sites/30/2024/10/logo.png" 
+                alt="Hồ Thị Thắm" 
+                className="h-full w-full object-cover" 
+                fill 
                 sizes="96px"
               />
             </div>
